@@ -1,0 +1,98 @@
+name: Release Builds
+
+on:
+  workflow_call:
+    outputs:
+      build_number:
+        description: "the release build number"
+        value: ${{ github.run_number }}
+
+permissions:
+  contents: write
+
+jobs:
+  build-ubuntu:
+    uses: clementreiffers/Bakefile/.github/workflows/build-ubuntu.yml@main
+
+  build-windows:
+    uses: clementreiffers/Bakefile/.github/workflows/build-windows.yml@main
+
+  build-macos:
+    uses: clementreiffers/Bakefile/.github/workflows/build-macos.yml@main
+
+  build-alpine:
+    uses: clementreiffers/Bakefile/.github/workflows/build-alpine.yml@main
+
+  release-project:
+    name: Release Project
+    runs-on: ubuntu-latest
+    needs: [build-ubuntu, build-windows, build-macos, build-alpine]
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          id: create_release
+          tag_name: ${{ github.run_number }}
+          release_name: Release ${{ github.run_number }}
+          draft: false
+          prerelease: false
+
+      - name: Download windows artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: artifact-windows
+      - name: Download ubuntu artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: artifact-ubuntu
+      - name: Download alpine artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: artifact-alpine
+      - name: Download macos artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: artifact-macos
+
+      - name: Upload ubuntu release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ubuntu
+          asset_name: ${{ github.event.repository.name }}-release-ubuntu-v${{ github.run_number }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload windows release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.event.repository.name }}.exe
+          asset_name: ${{ github.event.repository.name }}-release-windows-v${{ github.run_number }}.exe
+          asset_content_type: application/x-msdownload
+
+      - name: Upload alpine release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: alpine
+          asset_name: ${{ github.event.repository.name }}-release-alpine-v${{ github.run_number }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload macos release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: macos
+          asset_name: ${{ github.event.repository.name }}-release-macos-v${{ github.run_number }}
+          asset_content_type: application/octet-stream
