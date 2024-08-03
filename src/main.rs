@@ -30,9 +30,10 @@ fn store_variable(variables: &mut Vec<(String, String)>, line: &str) {
         .map(|(key, value)| variables.push((key.trim().to_string(), value.trim().to_string())));
 }
 
-fn store_recipe(current_rule: &mut Option<Rule>, line: &str) {
-    current_rule
-        .as_mut()
+fn store_recipe(rules: &mut Vec<Rule>, line: &str, target: &str) {
+    rules
+        .iter_mut()
+        .find(|rule| rule.target == target)
         .map(|rule| rule.recipe.push(line.trim().to_string()));
 }
 
@@ -40,39 +41,34 @@ fn get_rule<'a>(bakefile: &'a Bakefile, target: &'a str) -> Option<&'a Rule> {
     bakefile.rules.iter().find(|rule| rule.target == target)
 }
 
-fn read_bakefile(filename: &str) -> io::Result<Bakefile> {
-    let file = File::open(filename)?;
-    let reader = io::BufReader::new(file);
+fn populate_bakefile(filename: &str, variables: &mut Vec<(String, String)>, rules: &mut Vec<Rule>) {
+    let mut current_target: String = String::new();
 
-    let mut variables = Vec::new();
-    let mut rules = Vec::new();
-    let mut current_rule: Option<Rule> = None;
-
-    reader
+    io::BufReader::new(File::open(filename).expect("File; not found"))
         .lines()
         .filter_map(Result::ok) // Ignore les erreurs de lecture
         .filter(|line| !line.is_empty() && !line.starts_with('#')) // Filtre les lignes vides ou commentaires
         .for_each(|line| {
             if line.starts_with(' ') || line.starts_with('\t') {
-                store_recipe(&mut current_rule, &line);
+                store_recipe(rules, &line, &current_target);
             } else if let Some((target, dependencies)) = line.split_once(':') {
-                if let Some(rule) = current_rule.take() {
-                    rules.push(rule);
-                }
-                current_rule = Some(Rule {
-                    target: target.trim().to_string(),
+                let target: String = target.trim().to_string();
+                current_target = target.clone();
+                rules.push(Rule {
+                    target,
                     dependencies: dependencies.split_whitespace().map(String::from).collect(),
                     recipe: Vec::new(),
                 });
             } else {
-                store_variable(&mut variables, &line);
+                store_variable(variables, &line);
             }
         });
+}
 
-    if let Some(rule) = current_rule {
-        rules.push(rule);
-    }
-
+fn read_bakefile(filename: &str) -> io::Result<Bakefile> {
+    let mut variables = Vec::new();
+    let mut rules = Vec::new();
+    populate_bakefile(filename, &mut variables, &mut rules);
     Ok(Bakefile { variables, rules })
 }
 

@@ -1,0 +1,4 @@
+TEST2="I COME FROM BAKEFILE2"
+
+hello_include:
+	echo $(TEST2)
