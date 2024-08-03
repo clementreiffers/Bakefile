@@ -1,6 +1,7 @@
 use clap::Parser;
 use colored::*;
 use duct::cmd;
+use std::fmt::format;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::process::exit;
@@ -106,6 +107,8 @@ fn set_variables(command: &str, variables: &[(String, String)]) -> String {
         .iter()
         .fold(command.to_string(), |cmd, (key, value)| {
             cmd.replace(&format!("${}", key), value)
+                .replace(&format!("$({})", key), value)
+            // .replace(&format!("${{}}", key), value)
         })
 }
 
