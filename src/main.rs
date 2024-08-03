@@ -79,26 +79,29 @@ fn read_bakefile(filename: &str) -> io::Result<Bakefile> {
     Ok(Bakefile { variables, rules })
 }
 
+fn execute_command(command: &str) {
+    println!("{}", command.bold().green());
+    // Split the command line into parts
+    let mut parts = command.split_whitespace();
+    let command = parts.next().expect("No command found");
+    let args: Vec<&str> = parts.collect();
+    // Use duct to execute the command
+    match cmd(command, args).read() {
+        Ok(output) => {
+            println!("{}", output);
+        }
+        Err(e) => {
+            eprintln!("Error executing command: {}", e);
+        }
+    }
+}
+
 fn execute_recipe(recipe: &Vec<String>) {
-    for recipe in recipe {
-        if recipe.is_empty() {
+    for command in recipe {
+        if command.is_empty() {
             continue;
         }
-        println!("{}", recipe.bold().green());
-
-        // Split the command line into parts
-        let mut parts = recipe.split_whitespace();
-        let command = parts.next().expect("No command found");
-        let args: Vec<&str> = parts.collect();
-        // Use duct to execute the command
-        match cmd(command, args).read() {
-            Ok(output) => {
-                println!("{}", output);
-            }
-            Err(e) => {
-                eprintln!("Error executing command: {}", e);
-            }
-        }
+        execute_command(command);
     }
 }
 
