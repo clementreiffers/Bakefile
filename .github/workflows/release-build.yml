@@ -61,7 +61,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ubuntu
-          asset_name: ${{ github.event.repository.name }}-release-ubuntu-v${{ github.run_number }}
+          asset_name: bake-release-ubuntu-v${{ github.run_number }}
           asset_content_type: application/octet-stream
 
       - name: Upload windows release asset
@@ -71,7 +71,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ github.event.repository.name }}.exe
-          asset_name: ${{ github.event.repository.name }}-release-windows-v${{ github.run_number }}.exe
+          asset_name: bake-release-windows-v${{ github.run_number }}.exe
           asset_content_type: application/x-msdownload
 
       - name: Upload alpine release asset
@@ -81,7 +81,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: alpine
-          asset_name: ${{ github.event.repository.name }}-release-alpine-v${{ github.run_number }}
+          asset_name: bake-release-alpine-v${{ github.run_number }}
           asset_content_type: application/octet-stream
 
       - name: Upload macos release asset
@@ -91,5 +91,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: macos
-          asset_name: ${{ github.event.repository.name }}-release-macos-v${{ github.run_number }}
+          asset_name: bake-release-macos-v${{ github.run_number }}
           asset_content_type: application/octet-stream
