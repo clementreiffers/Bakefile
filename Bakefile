@@ -2,6 +2,7 @@ TRUC="Hello, world!"
 
 include:
 	Bakefile2
+	"https://raw.githubusercontent.com/clementreiffers/Bakefile/main/Bakefile3?token=GHSAT0AAAAAACVHTF3XJGYMLTMDMD43K75CZVOGHJQ"
 
 hello_world: bakefile
 	echo "thirdstep"
