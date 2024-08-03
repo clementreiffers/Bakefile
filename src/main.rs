@@ -108,7 +108,7 @@ fn set_variables(command: &str, variables: &[(String, String)]) -> String {
         .fold(command.to_string(), |cmd, (key, value)| {
             cmd.replace(&format!("${}", key), value)
                 .replace(&format!("$({})", key), value)
-            // .replace(&format!("${{}}", key), value)
+                .replace(&format!("${{{}}}", key), value)
         })
 }
 

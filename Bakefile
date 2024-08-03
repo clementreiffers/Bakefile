@@ -4,6 +4,7 @@ hello_world: bakefile
 	echo "thirdstep"
 	echo $TRUC
 	echo $(TRUC)
+	echo ${TRUC}
 
 bakefile: 
 	echo "firststep"
