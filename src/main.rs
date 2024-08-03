@@ -81,7 +81,6 @@ fn read_bakefile(filename: &str) -> io::Result<Bakefile> {
 }
 
 fn execute_command(command: String) {
-    println!("{}", command.bold().green());
     // Split the command line into parts
     let mut parts = command.split_whitespace();
     let command = parts.next().expect("No command found");
@@ -103,6 +102,7 @@ fn execute_recipe(recipe: &Vec<String>, variables: &Vec<(String, String)>) {
         if command.is_empty() {
             continue;
         }
+        println!("{}", command.bold().green());
         execute_command(set_variables(command, variables));
     }
 }
@@ -133,6 +133,5 @@ fn execute_rule(bakefile: &Bakefile, target_rule: &str) {
 fn main() {
     let args: Args = Args::parse();
     let bakefile = read_bakefile("Bakefile").unwrap();
-    println!("{:?}", bakefile);
     execute_rule(&bakefile, &args.rule);
 }
