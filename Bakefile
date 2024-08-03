@@ -1,5 +1,8 @@
 TRUC="Hello, world!"
 
+include:
+	Bakefile2
+
 hello_world: bakefile
 	echo "thirdstep"
 	echo $TRUC
