@@ -23,16 +23,16 @@ struct Rule {
     dependencies: Vec<String>,
     recipe: Vec<String>,
 }
+
 fn store_variable(variables: &mut Vec<(String, String)>, line: &str) {
-    if let Some((key, value)) = line.split_once('=') {
-        variables.push((key.trim().to_string(), value.trim().to_string()));
-    }
+    line.split_once('=')
+        .map(|(key, value)| variables.push((key.trim().to_string(), value.trim().to_string())));
 }
 
 fn store_recipe(current_rule: &mut Option<Rule>, line: &str) {
-    if let Some(rule) = current_rule.as_mut() {
-        rule.recipe.push(line.trim().to_string());
-    }
+    current_rule
+        .as_mut()
+        .map(|rule| rule.recipe.push(line.trim().to_string()));
 }
 
 fn get_rule<'a>(bakefile: &'a Bakefile, target: &'a str) -> Option<&'a Rule> {
@@ -40,38 +40,33 @@ fn get_rule<'a>(bakefile: &'a Bakefile, target: &'a str) -> Option<&'a Rule> {
 }
 
 fn read_bakefile(filename: &str) -> io::Result<Bakefile> {
+    let file = File::open(filename)?;
+    let reader = io::BufReader::new(file);
+
     let mut variables = Vec::new();
     let mut rules = Vec::new();
     let mut current_rule: Option<Rule> = None;
 
-    let file = File::open(filename)?;
-    let reader = io::BufReader::new(file);
-
-    for line in reader.lines() {
-        let line = line?;
-
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-
-        if line.starts_with(" ") || line.starts_with("\t") {
-            store_recipe(&mut current_rule, &line)
-        } else if let Some((target, dependencies)) = line.split_once(':') {
-            if let Some(rule) = current_rule {
-                rules.push(rule);
+    reader
+        .lines()
+        .filter_map(Result::ok) // Ignore les erreurs de lecture
+        .filter(|line| !line.is_empty() && !line.starts_with('#')) // Filtre les lignes vides ou commentaires
+        .for_each(|line| {
+            if line.starts_with(' ') || line.starts_with('\t') {
+                store_recipe(&mut current_rule, &line);
+            } else if let Some((target, dependencies)) = line.split_once(':') {
+                if let Some(rule) = current_rule.take() {
+                    rules.push(rule);
+                }
+                current_rule = Some(Rule {
+                    target: target.trim().to_string(),
+                    dependencies: dependencies.split_whitespace().map(String::from).collect(),
+                    recipe: Vec::new(),
+                });
+            } else {
+                store_variable(&mut variables, &line);
             }
-            current_rule = Some(Rule {
-                target: target.trim().to_string(),
-                dependencies: dependencies
-                    .split_whitespace()
-                    .map(|s| s.to_string())
-                    .collect(),
-                recipe: Vec::new(),
-            });
-        } else {
-            store_variable(&mut variables, &line);
-        }
-    }
+        });
 
     if let Some(rule) = current_rule {
         rules.push(rule);
@@ -81,53 +76,49 @@ fn read_bakefile(filename: &str) -> io::Result<Bakefile> {
 }
 
 fn execute_command(command: String) {
-    // Split the command line into parts
-    let mut parts = command.split_whitespace();
-    let command = parts.next().expect("No command found");
-    let args: Vec<&str> = parts.collect();
-    // Use duct to execute the command
-    match cmd(command, args).read() {
-        Ok(output) => {
-            println!("{}", output);
-        }
-        Err(e) => {
+    let (command, args): (&str, Vec<&str>) = command
+        .split_whitespace()
+        .collect::<Vec<&str>>()
+        .split_first()
+        .map(|(first, rest)| (*first, rest.to_vec()))
+        .expect("No command found");
+
+    cmd(command, args)
+        .read()
+        .map(|output| println!("{}", output))
+        .unwrap_or_else(|e| {
             eprintln!("{}", e.to_string().red());
             exit(1);
-        }
-    }
+        });
+}
+fn execute_recipe(recipe: &[String], variables: &[(String, String)]) {
+    recipe
+        .iter()
+        .filter(|command| !command.is_empty())
+        .for_each(|command| {
+            println!("{}", command.bold().green());
+            execute_command(set_variables(command, variables));
+        });
 }
 
-fn execute_recipe(recipe: &Vec<String>, variables: &Vec<(String, String)>) {
-    for command in recipe {
-        if command.is_empty() {
-            continue;
-        }
-        println!("{}", command.bold().green());
-        execute_command(set_variables(command, variables));
-    }
-}
-
-fn set_variables(command: &str, variables: &Vec<(String, String)>) -> String {
-    let mut command = command.to_string();
-    for (key, value) in variables {
-        if command.contains(key) {
-            let value = value.as_str();
-            let key = format!("${}", key);
-            command = command.replace(key.as_str(), value);
-        }
-    }
-    command
+fn set_variables(command: &str, variables: &[(String, String)]) -> String {
+    variables
+        .iter()
+        .fold(command.to_string(), |cmd, (key, value)| {
+            cmd.replace(&format!("${}", key), value)
+        })
 }
 
 fn execute_rule(bakefile: &Bakefile, target_rule: &str) {
-    let rule = get_rule(&bakefile, target_rule).unwrap();
-    for dependency in &rule.dependencies {
-        if let Some(dependency_rule) = get_rule(bakefile, &dependency) {
-            execute_rule(bakefile, dependency_rule.target.as_str());
-        }
+    if let Some(rule) = get_rule(bakefile, target_rule) {
+        rule.dependencies
+            .iter()
+            .filter_map(|dependency| get_rule(bakefile, dependency))
+            .for_each(|dependency_rule| execute_rule(bakefile, &dependency_rule.target));
+
+        println!("{}", rule.target.bold().blue());
+        execute_recipe(&rule.recipe, &bakefile.variables);
     }
-    println!("{}", rule.target.bold().blue());
-    execute_recipe(&rule.recipe, &bakefile.variables);
 }
 
 fn main() {
