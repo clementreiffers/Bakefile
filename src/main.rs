@@ -126,6 +126,7 @@ fn execute_rule(bakefile: &Bakefile, target_rule: &str) {
             execute_rule(bakefile, dependency_rule.target.as_str());
         }
     }
+    println!("{}", rule.target.bold().blue());
     execute_recipe(&rule.recipe, &bakefile.variables);
 }
 
