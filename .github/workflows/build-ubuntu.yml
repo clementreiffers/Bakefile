@@ -1,12 +1,11 @@
 name: Build Ubuntu
 
-
 on:
-    workflow_call:
-        outputs:
-            artifact:
-                description: "Executable for Ubuntu"
-                value: ${{ jobs.build.result.release_name }}
+  workflow_call:
+    outputs:
+      artifact:
+        description: "Executable for Ubuntu"
+        value: ${{ jobs.build.result.release_name }}
 
 permissions:
   contents: write
@@ -18,13 +17,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-        release_name: ${{ steps.setReleaseName.outputs.release_name }}
+      release_name: ${{ steps.setReleaseName.outputs.release_name }}
     steps:
       - uses: actions/checkout@v3
       - name: build
         run: cargo build --release
       - name: move executable to root
-        run: mv ./target/release/${{ github.event.repository.name }} ./ubuntu
+        run: mv ./target/release/bake ./ubuntu
       - name: upload artifact release
         uses: actions/upload-artifact@v2
         with:

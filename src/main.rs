@@ -3,9 +3,6 @@ use colored::*;
 use duct::cmd;
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::path::Path;
-use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::process::Command;
 #[derive(Debug)]
 struct Bakefile {
     variables: Vec<(String, String)>,

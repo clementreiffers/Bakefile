@@ -1,11 +1,11 @@
 name: Build MacOS
 
 on:
-    workflow_call:
-        outputs:
-            artifact:
-                description: "Executable for MacOS"
-                value: ${{ jobs.build.result.release_name }}
+  workflow_call:
+    outputs:
+      artifact:
+        description: "Executable for MacOS"
+        value: ${{ jobs.build.result.release_name }}
 
 permissions:
   contents: write
@@ -17,13 +17,13 @@ jobs:
   build:
     runs-on: macos-latest
     outputs:
-        release_name: ${{ steps.setReleaseName.outputs.release_name }}
+      release_name: ${{ steps.setReleaseName.outputs.release_name }}
     steps:
       - uses: actions/checkout@v3
       - name: build
         run: cargo build --release
       - name: move executable to root
-        run: mv ./target/release/${{ github.event.repository.name }} ./macos
+        run: mv ./target/release/bake ./macos
       - name: upload artifact release
         uses: actions/upload-artifact@v2
         with:
