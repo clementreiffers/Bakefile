@@ -1,11 +1,8 @@
 name: Release Builds
 
 on:
-  workflow_call:
-    outputs:
-      build_number:
-        description: "the release build number"
-        value: ${{ github.run_number }}
+  push:
+    branches: ["main"]
 
 permissions:
   contents: write
