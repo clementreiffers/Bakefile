@@ -70,7 +70,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.event.repository.name }}.exe
+          asset_path: bake.exe
           asset_name: bake-release-windows-v${{ github.run_number }}.exe
           asset_content_type: application/x-msdownload
 
