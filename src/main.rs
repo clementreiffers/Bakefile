@@ -3,6 +3,7 @@ use colored::*;
 use duct::cmd;
 use std::fs::File;
 use std::io::{self, BufRead};
+use std::process::exit;
 #[derive(Debug)]
 struct Bakefile {
     variables: Vec<(String, String)>,
@@ -79,7 +80,7 @@ fn read_bakefile(filename: &str) -> io::Result<Bakefile> {
     Ok(Bakefile { variables, rules })
 }
 
-fn execute_command(command: &str) {
+fn execute_command(command: String) {
     println!("{}", command.bold().green());
     // Split the command line into parts
     let mut parts = command.split_whitespace();
@@ -91,34 +92,46 @@ fn execute_command(command: &str) {
             println!("{}", output);
         }
         Err(e) => {
-            eprintln!("Error executing command: {}", e);
+            eprintln!("{}", e.to_string().red());
+            exit(1);
         }
     }
 }
 
-fn execute_recipe(recipe: &Vec<String>) {
+fn execute_recipe(recipe: &Vec<String>, variables: &Vec<(String, String)>) {
     for command in recipe {
         if command.is_empty() {
             continue;
         }
-        execute_command(command);
+        execute_command(set_variables(command, variables));
     }
+}
+
+fn set_variables(command: &str, variables: &Vec<(String, String)>) -> String {
+    let mut command = command.to_string();
+    for (key, value) in variables {
+        if command.contains(key) {
+            let value = value.as_str();
+            let key = format!("${}", key);
+            command = command.replace(key.as_str(), value);
+        }
+    }
+    command
 }
 
 fn execute_rule(bakefile: &Bakefile, target_rule: &str) {
     let rule = get_rule(&bakefile, target_rule).unwrap();
-
     for dependency in &rule.dependencies {
         if let Some(dependency_rule) = get_rule(bakefile, &dependency) {
             execute_rule(bakefile, dependency_rule.target.as_str());
         }
     }
-    execute_recipe(&rule.recipe);
+    execute_recipe(&rule.recipe, &bakefile.variables);
 }
 
 fn main() {
     let args: Args = Args::parse();
     let bakefile = read_bakefile("Bakefile").unwrap();
-
+    println!("{:?}", bakefile);
     execute_rule(&bakefile, &args.rule);
 }
