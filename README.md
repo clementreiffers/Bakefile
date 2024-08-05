@@ -9,3 +9,8 @@ Welcome to Bakefile! This project is a modern reimagining of the traditional Mak
 ## Why Bakefile?
 
 Makefiles have been the go-to solution for managing build processes in numerous projects. However, as projects grow in complexity, traditional Makefiles can become cumbersome and difficult to maintain. Bakefile seeks to overcome these challenges by introducing a more robust and feature-rich alternative, leveraging the power and performance of Rust.
+
+## Contribution
+
+do you want to contribute to this project?
+do not hesitate to create a pull request or send an email to reiffersclement@gmail.com !
