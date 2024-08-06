@@ -1,10 +1,13 @@
 use clap::Parser;
 use colored::*;
 use duct::cmd;
+use reqwest::{Error, Response};
 use std::fmt::format;
 use std::fs::File;
 use std::io::{self, BufRead};
+use std::io::{stdout, Write};
 use std::process::exit;
+use url::Url;
 #[derive(Debug)]
 struct Bakefile {
     variables: Vec<(String, String)>,
@@ -42,18 +45,53 @@ fn get_rule<'a>(bakefile: &'a Bakefile, target: &'a str) -> Option<&'a Rule> {
     bakefile.rules.iter().find(|rule| rule.target == target)
 }
 
-fn populate_bakefile(
+fn read_local_bakefile(filename: &str) -> String {
+    println!("Reading bakefile from {}", filename);
+    io::BufReader::new(File::open(filename).expect("File; not found"))
+        .lines()
+        .filter_map(Result::ok) // Ignore les erreurs de lecture
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
+fn clean_url(url: &str) -> String {
+    if url.starts_with('"') && url.ends_with('"') || url.starts_with('\'') && url.ends_with('\'') {
+        url.chars().skip(1).take(url.len() - 2).collect()
+    } else {
+        url.to_string()
+    }
+}
+
+async fn get_hosted_bakefile(url: &str) -> String {
+    let url = clean_url(url);
+    if Url::parse(&url).is_ok() {
+        reqwest::get(url)
+            .await
+            .expect("unable to get response")
+            .text()
+            .await
+            .expect("unable to get the body")
+    } else {
+        panic!("Invalid URL provided {}", url);
+    }
+}
+
+async fn populate_bakefile(
     filename: &str,
     variables: &mut Vec<(String, String)>,
     rules: &mut Vec<Rule>,
     includes: &mut Vec<String>,
-) {
+) -> Result<(), Error> {
     let mut current_target: String = String::new();
     let mut is_including: bool = false;
 
-    io::BufReader::new(File::open(filename).expect("File; not found"))
-        .lines()
-        .filter_map(Result::ok) // Ignore les erreurs de lecture
+    let content: String = match filename.contains("http") {
+        true => get_hosted_bakefile(filename).await,
+        false => read_local_bakefile(filename),
+    };
+
+    content
+        .split("\n")
         .filter(|line| !line.is_empty() && !line.starts_with('#')) // Filtre les lignes vides ou commentaires
         .for_each(|line| {
             if line.starts_with(' ') || line.starts_with('\t') {
@@ -79,18 +117,23 @@ fn populate_bakefile(
                 store_variable(variables, &line);
             }
         });
+    Ok(())
 }
-fn read_bakefile(filename: &str) -> io::Result<Bakefile> {
+async fn read_bakefile(filename: &str) -> io::Result<Bakefile> {
     let mut variables = Vec::new();
     let mut rules = Vec::new();
     let mut includes = Vec::new();
 
     // Initial population of the bakefile
-    populate_bakefile(filename, &mut variables, &mut rules, &mut includes);
+    populate_bakefile(filename, &mut variables, &mut rules, &mut includes)
+        .await
+        .expect("unable to populate bakefile");
 
     // Collect includes that need further processing
     while let Some(include) = includes.pop() {
-        populate_bakefile(&include, &mut variables, &mut rules, &mut includes);
+        populate_bakefile(&include, &mut variables, &mut rules, &mut includes)
+            .await
+            .expect("unable to populate bakefile");
     }
 
     Ok(Bakefile {
@@ -148,9 +191,10 @@ fn execute_rule(bakefile: &Bakefile, target_rule: &str) {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Args = Args::parse();
-    let bakefile = read_bakefile("Bakefile").unwrap();
+    let bakefile = read_bakefile("Bakefile").await.unwrap();
 
     println!("{:?}", bakefile);
     execute_rule(&bakefile, &args.rule);
