@@ -14,3 +14,5 @@ bakefile:
 	echo "firststep"
 	echo "secondstep"
 
+sl:
+	sl
