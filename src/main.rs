@@ -4,9 +4,10 @@ use duct::cmd;
 use reqwest::{Error, Response};
 use std::fmt::format;
 use std::fs::File;
-use std::io::{self, BufRead};
-use std::io::{stdout, Write};
+use std::io::{self, stdout, Write};
+use std::io::{BufRead, BufReader};
 use std::process::exit;
+use std::process::{Command, Stdio};
 use url::Url;
 #[derive(Debug)]
 struct Bakefile {
@@ -151,13 +152,18 @@ fn execute_command(command: String) {
         .map(|(first, rest)| (*first, rest.to_vec()))
         .expect("No command found");
 
-    cmd(command, args)
-        .read()
-        .map(|output| println!("{}", output))
-        .unwrap_or_else(|e| {
-            eprintln!("{}", e.to_string().red());
-            exit(1);
-        });
+    let command = cmd(command, args)
+        .stderr_to_stdout()
+        .reader()
+        .expect("Failed to execute command");
+    let reader = BufReader::new(command);
+
+    for line in reader.lines() {
+        match line {
+            Ok(line) => println!("{}", line),
+            Err(err) => eprintln!("Error reading line: {}", err),
+        }
+    }
 }
 fn execute_recipe(recipe: &[String], variables: &[(String, String)]) {
     recipe
