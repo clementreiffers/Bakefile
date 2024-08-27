@@ -1,9 +1,6 @@
 TRUC="Hello, world!"
 
-include:
-	Bakefile2
-	https://raw.githubusercontent.com/clementreiffers/Bakefile/main/Bakefile3
-	"https://raw.githubusercontent.com/clementreiffers/Bakefile/main/Bakefile3"
+
 hello_world: bakefile
 	echo "thirdstep"
 	echo $TRUC
@@ -16,3 +13,8 @@ bakefile:
 
 sl:
 	sl
+
+long_echo:
+	echo test
+	echo test2
+	sdklthgdfltg

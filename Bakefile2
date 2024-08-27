@@ -1,4 +1,9 @@
 TEST2="I COME FROM BAKEFILE2"
 
+include: # move them into bakefile
+	Bakefile2
+	https://raw.githubusercontent.com/clementreiffers/Bakefile/main/Bakefile3
+	"https://raw.githubusercontent.com/clementreiffers/Bakefile/main/Bakefile3"
+
 hello_include: hello_world
 	echo $(TEST2)

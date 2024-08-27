@@ -1,13 +1,12 @@
 use clap::Parser;
 use colored::*;
-use duct::cmd;
-use reqwest::{Error, Response};
+use duct::{cmd, ReaderHandle};
+use loading::Loading;
+use reqwest::Error;
 use std::fmt::format;
 use std::fs::File;
-use std::io::{self, stdout, Write};
+use std::io::{self, Read, Write};
 use std::io::{BufRead, BufReader};
-use std::process::exit;
-use std::process::{Command, Stdio};
 use url::Url;
 #[derive(Debug)]
 struct Bakefile {
@@ -21,6 +20,8 @@ struct Bakefile {
 struct Args {
     #[arg(short, long)]
     rule: String,
+    #[arg(short, long)]
+    verbose: bool,
 }
 
 #[derive(Debug)]
@@ -144,34 +145,45 @@ async fn read_bakefile(filename: &str) -> io::Result<Bakefile> {
     })
 }
 
-fn execute_command(command: String) {
-    let (command, args): (&str, Vec<&str>) = command
+fn execute_command(command: String, verbose: &bool) {
+    let (base_cmd, args): (&str, Vec<&str>) = command
         .split_whitespace()
         .collect::<Vec<&str>>()
         .split_first()
         .map(|(first, rest)| (*first, rest.to_vec()))
         .expect("No command found");
 
-    let command = cmd(command, args)
-        .stderr_to_stdout()
-        .reader()
-        .expect("Failed to execute command");
-    let reader = BufReader::new(command);
+    let loading = Loading::default();
 
-    for line in reader.lines() {
-        match line {
-            Ok(line) => println!("{}", line),
-            Err(err) => eprintln!("Error reading line: {}", err),
+    match cmd(base_cmd, args).stderr_to_stdout().reader() {
+        Ok(result) => {
+            let reader = BufReader::new(result);
+
+            loading.text(command.clone());
+            for line in reader.lines() {
+                let line = line.expect("failed to read line");
+                if *verbose {
+                    println!("\n{}", line)
+                }
+            }
+            loading.success(format!("{}", command));
         }
-    }
+        Err(e) => {
+            loading.fail(format!("{}", command));
+            if *verbose {
+                println!("{}", e)
+            }
+        }
+    };
+    loading.end();
 }
-fn execute_recipe(recipe: &[String], variables: &[(String, String)]) {
+
+fn execute_recipe(recipe: &[String], variables: &[(String, String)], verbose: &bool) {
     recipe
         .iter()
         .filter(|command| !command.is_empty())
         .for_each(|command| {
-            println!("{}", command.bold().green());
-            execute_command(set_variables(command, variables));
+            execute_command(set_variables(command, variables), verbose);
         });
 }
 
@@ -185,15 +197,15 @@ fn set_variables(command: &str, variables: &[(String, String)]) -> String {
         })
 }
 
-fn execute_rule(bakefile: &Bakefile, target_rule: &str) {
+fn execute_rule(bakefile: &Bakefile, target_rule: &str, verbose: &bool) {
     if let Some(rule) = get_rule(bakefile, target_rule) {
         rule.dependencies
             .iter()
             .filter_map(|dependency| get_rule(bakefile, dependency))
-            .for_each(|dependency_rule| execute_rule(bakefile, &dependency_rule.target));
+            .for_each(|dependency_rule| execute_rule(bakefile, &dependency_rule.target, verbose));
 
         println!("{}", rule.target.bold().blue());
-        execute_recipe(&rule.recipe, &bakefile.variables);
+        execute_recipe(&rule.recipe, &bakefile.variables, &verbose);
     }
 }
 
@@ -203,5 +215,5 @@ async fn main() {
     let bakefile = read_bakefile("Bakefile").await.unwrap();
 
     println!("{:?}", bakefile);
-    execute_rule(&bakefile, &args.rule);
+    execute_rule(&bakefile, &args.rule, &args.verbose);
 }
