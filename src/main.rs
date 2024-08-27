@@ -209,8 +209,7 @@ fn execute_rule(bakefile: &Bakefile, target_rule: &str, verbose: &bool) {
         println!("{}", rule.target.bold().blue());
         execute_recipe(&rule.recipe, &bakefile.variables, &verbose);
     } else {
-        eprintln!("no rule exists at {}", target_rule.red().bold());
-        exit(1);
+        panic!("no rule exists at {}", target_rule.red().bold());
     }
 }
 
