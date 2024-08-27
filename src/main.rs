@@ -51,7 +51,6 @@ fn get_rule<'a>(bakefile: &'a Bakefile, target: &'a str) -> Option<&'a Rule> {
 }
 
 fn read_local_bakefile(filename: &str) -> String {
-    println!("Reading bakefile from {}", filename);
     io::BufReader::new(File::open(filename).expect("File; not found"))
         .lines()
         .filter_map(Result::ok) // Ignore les erreurs de lecture
@@ -211,6 +210,9 @@ fn execute_rule(bakefile: &Bakefile, target_rule: &str, verbose: &bool) {
 
         println!("{}", rule.target.bold().blue());
         execute_recipe(&rule.recipe, &bakefile.variables, &verbose);
+    } else {
+        eprintln!("no rule exists at {}", target_rule.red().bold());
+        exit(1);
     }
 }
 
@@ -219,6 +221,5 @@ async fn main() {
     let args: Args = Args::parse();
     let bakefile = read_bakefile(&args.file).await.unwrap();
 
-    println!("{:?}", bakefile);
     execute_rule(&bakefile, &args.rule, &args.verbose);
 }
