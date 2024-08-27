@@ -1,2 +1,2 @@
-hello_bk3: hello_include
+hello_bk3: 
     echo "HELLO THERE I COME FROM BAKEFILE3"

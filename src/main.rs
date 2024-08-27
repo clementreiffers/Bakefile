@@ -23,6 +23,8 @@ struct Args {
     rule: String,
     #[arg(short, long)]
     verbose: bool,
+    #[arg(short, long)]
+    file: String,
 }
 
 #[derive(Debug)]
@@ -215,7 +217,7 @@ fn execute_rule(bakefile: &Bakefile, target_rule: &str, verbose: &bool) {
 #[tokio::main]
 async fn main() {
     let args: Args = Args::parse();
-    let bakefile = read_bakefile("Bakefile").await.unwrap();
+    let bakefile = read_bakefile(&args.file).await.unwrap();
 
     println!("{:?}", bakefile);
     execute_rule(&bakefile, &args.rule, &args.verbose);
