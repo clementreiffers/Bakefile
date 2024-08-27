@@ -16,5 +16,6 @@ sl:
 
 long_echo:
 	echo test
+	sleep 5
 	echo test2
 	sdklthgdfltg

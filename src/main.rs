@@ -7,6 +7,7 @@ use std::fmt::format;
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::io::{BufRead, BufReader};
+use std::process::exit;
 use url::Url;
 #[derive(Debug)]
 struct Bakefile {
@@ -154,12 +155,12 @@ fn execute_command(command: String, verbose: &bool) {
         .expect("No command found");
 
     let loading = Loading::default();
+    loading.text(command.clone());
 
     match cmd(base_cmd, args).stderr_to_stdout().reader() {
         Ok(result) => {
             let reader = BufReader::new(result);
 
-            loading.text(command.clone());
             for line in reader.lines() {
                 let line = line.expect("failed to read line");
                 if *verbose {
@@ -167,15 +168,17 @@ fn execute_command(command: String, verbose: &bool) {
                 }
             }
             loading.success(format!("{}", command));
+            loading.end();
         }
         Err(e) => {
             loading.fail(format!("{}", command));
             if *verbose {
-                println!("{}", e)
+                println!("\n{}", e)
             }
+            loading.end();
+            exit(1);
         }
     };
-    loading.end();
 }
 
 fn execute_recipe(recipe: &[String], variables: &[(String, String)], verbose: &bool) {
