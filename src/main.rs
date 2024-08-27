@@ -1,12 +1,10 @@
 use clap::Parser;
 use colored::*;
-use duct::{cmd, ReaderHandle};
+use duct::cmd;
 use loading::Loading;
 use reqwest::Error;
-use std::fmt::format;
 use std::fs::File;
-use std::io::{self, Read, Write};
-use std::io::{BufRead, BufReader};
+use std::io::{self, BufRead, BufReader};
 use std::process::exit;
 use url::Url;
 #[derive(Debug)]
