@@ -146,40 +146,49 @@ async fn read_bakefile(filename: &str) -> io::Result<Bakefile> {
 }
 
 fn execute_command(command: String, verbose: &bool) {
-    let (base_cmd, args): (&str, Vec<&str>) = command
+    // Split the command into the base command and arguments.
+    let (base_cmd, args) = command
         .split_whitespace()
         .collect::<Vec<&str>>()
         .split_first()
         .map(|(first, rest)| (*first, rest.to_vec()))
         .expect("No command found");
 
+    // Initialize and configure the loading object.
     let loading = Loading::default();
     loading.text(command.clone());
 
-    match cmd(base_cmd, args).stderr_to_stdout().reader() {
-        Ok(result) => {
-            let reader = BufReader::new(result);
+    // Attempt to execute the command and process its output.
+    let result = cmd(base_cmd, args)
+        .stderr_to_stdout()
+        .reader()
+        .map(BufReader::new);
 
-            for line in reader.lines() {
-                let line = line.expect("failed to read line");
-                if *verbose {
-                    println!("\n{}", line)
-                }
-            }
+    match result {
+        Ok(reader) => {
+            // Iterate over the lines of the command's output.
+            reader
+                .lines()
+                .filter_map(Result::ok) // Filters out lines that failed to read
+                .for_each(|line| {
+                    if *verbose {
+                        println!("\n{}", line);
+                    }
+                });
+
             loading.success(format!("{}", command));
-            loading.end();
         }
         Err(e) => {
             loading.fail(format!("{}", command));
             if *verbose {
-                println!("\n{}", e)
+                println!("\n{}", e);
             }
-            loading.end();
             exit(1);
         }
-    };
-}
+    }
 
+    loading.end();
+}
 fn execute_recipe(recipe: &[String], variables: &[(String, String)], verbose: &bool) {
     recipe
         .iter()
