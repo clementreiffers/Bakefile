@@ -45,7 +45,12 @@ fn store_recipe(rules: &mut Vec<Rule>, line: &str, target: &str) {
 }
 
 fn get_rule<'a>(bakefile: &'a Bakefile, target: &'a str) -> Option<&'a Rule> {
-    bakefile.rules.iter().find(|rule| rule.target == target)
+    let rule = bakefile.rules.iter().find(|rule| rule.target == target);
+    if rule.is_none() {
+        eprintln!("No rule found for target {}", target.red().bold());
+        exit(1);
+    }
+    rule
 }
 
 fn read_local_bakefile(filename: &str) -> String {
